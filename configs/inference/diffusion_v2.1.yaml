@@ -1,7 +1,7 @@
 target: diffbir.model.Diffusion
 params:
-  linear_start: 0.00085
-  linear_end: 0.0120
-  timesteps: 1000
-  zero_snr: True
-  parameterization: v
+  linear_start: 0.00085    # 噪声调度线性起始值
+  linear_end: 0.0120       # 噪声调度线性终止值
+  timesteps: 1000          # 扩散过程总步数
+  zero_snr: True           # 启用零信噪比加权
+  parameterization: v      # 使用v-parameterization方法

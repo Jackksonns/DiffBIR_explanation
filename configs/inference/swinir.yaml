@@ -1,16 +1,32 @@
+# 指定要使用的模型类，这里是 diffbir.model 模块中的 SwinIR 类
 target: diffbir.model.SwinIR
+# 模型的参数设置
 params:
+  # 输入图像的大小，表示图像的高度和宽度
   img_size: 64
+  # 图像分块的大小，表示每个块的高度和宽度
   patch_size: 1
+  # 输入通道数，表示输入图像的颜色通道数（例如，RGB 图像为 3）
   in_chans: 3
+  # 嵌入维度，表示特征图的通道数
   embed_dim: 180
+  # 每个阶段的深度，表示每个阶段的层数
   depths: [6, 6, 6, 6, 6, 6, 6, 6]
+  # 每个阶段的注意力头数，表示每个阶段的注意力机制的头数
   num_heads: [6, 6, 6, 6, 6, 6, 6, 6]
+  # 窗口大小，表示注意力机制中窗口的大小
   window_size: 8
+  # MLP 比率，表示 MLP 层的扩展比例
   mlp_ratio: 2
+  # 缩放因子，表示输出图像的缩放比例
   sf: 8
+  # 图像范围，表示输入图像的像素值范围
   img_range: 1.0
+  # 上采样方法，表示使用的上采样技术
   upsampler: "nearest+conv"
+  # 残差连接方式，表示残差连接的类型
   resi_connection: "1conv"
+  # 是否进行反打乱操作
   unshuffle: True
+  # 反打乱的缩放比例
   unshuffle_scale: 8

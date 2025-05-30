@@ -1,27 +1,33 @@
+# 导入类型提示模块
 from typing import overload, Tuple
 
+# 导入 PyTorch 相关模块
 import torch
 from torch import nn
 from torch.nn import functional as F
 import numpy as np
 from PIL import Image
 
+# 导入自定义的采样器模块
 from .sampler import (
     SpacedSampler,
     DDIMSampler,
     DPMSolverSampler,
     EDMSampler,
 )
+# 导入条件函数模块
 from .utils.cond_fn import Guidance
+# 导入通用工具函数模块
 from .utils.common import (
     wavelet_reconstruction,
     trace_vram_usage,
     make_tiled_fn,
     VRAMPeakMonitor,
 )
+# 导入模型模块
 from .model import ControlLDM, Diffusion, RRDBNet
 
-
+# 定义调整图像短边大小的函数
 def resize_short_edge_to(imgs: torch.Tensor, size: int) -> torch.Tensor:
     _, _, h, w = imgs.size()
     if h == w:
@@ -33,7 +39,7 @@ def resize_short_edge_to(imgs: torch.Tensor, size: int) -> torch.Tensor:
 
     return F.interpolate(imgs, size=(out_h, out_w), mode="bicubic", antialias=True)
 
-
+# 定义将图像填充到指定倍数的函数
 def pad_to_multiples_of(imgs: torch.Tensor, multiple: int) -> torch.Tensor:
     _, _, h, w = imgs.size()
     if h % multiple == 0 and w % multiple == 0:
@@ -41,7 +47,7 @@ def pad_to_multiples_of(imgs: torch.Tensor, multiple: int) -> torch.Tensor:
     ph, pw = map(lambda x: (x + multiple - 1) // multiple * multiple - x, (h, w))
     return F.pad(imgs, pad=(0, pw, 0, ph), mode="constant", value=0)
 
-
+# 定义主要的处理流程类
 class Pipeline:
 
     def __init__(
@@ -59,15 +65,18 @@ class Pipeline:
         self.device = device
         self.output_size: Tuple[int, int] = None
 
+    # 设置输出图像的大小
     def set_output_size(self, lq_size: Tuple[int]) -> None:
         h, w = lq_size[2:]
         self.output_size = (h, w)
 
+    # 应用清理器处理输入图像
     @overload
     def apply_cleaner(
         self, lq: torch.Tensor, tiled: bool, tile_size: int, tile_stride: int
     ) -> torch.Tensor: ...
 
+    # 应用条件扩散模型进行图像生成
     def apply_cldm(
         self,
         cond_img: torch.Tensor,
@@ -95,21 +104,19 @@ class Pipeline:
         order: int,
     ) -> torch.Tensor:
         bs, _, h0, w0 = cond_img.shape
-        # 1. Pad condition image for VAE encoding (scale factor = 8)
-        # 1.1 Whether or not tiled inference is used, the input image size for the VAE must be a multiple of 8.
+        # 1. 对条件图像进行填充，以便 VAE 编码（缩放因子为 8）
         if not vae_encoder_tiled and not cldm_tiled:
-            # For backward capability, pad condition to be multiples of 64
             cond_img = pad_to_multiples_of(cond_img, multiple=64)
         else:
             cond_img = pad_to_multiples_of(cond_img, multiple=8)
-        # 1.2 Check vae encoder tile size
+        # 检查 VAE 编码器的分块大小
         if vae_encoder_tiled and (
             cond_img.size(2) < vae_encoder_tile_size
             or cond_img.size(3) < vae_encoder_tile_size
         ):
             print("[VAE Encoder]: the input size is tiny and unnecessary to tile.")
             vae_encoder_tiled = False
-        # 1.3 If tiled inference is used, then the size of each tile also needs to be a multiple of 8.
+        # 如果使用分块推理，则每个分块的大小也需要是 8 的倍数
         if vae_encoder_tiled:
             if vae_encoder_tile_size % 8 != 0:
                 raise ValueError("VAE encoder tile size must be a multiple of 8")
@@ -127,22 +134,18 @@ class Pipeline:
                 vae_encoder_tile_size,
             )
         h1, w1 = cond["c_img"].shape[2:]
-        # 2. Pad condition latent for U-Net inference (scale factor = 8)
-        # 2.1 Check cldm tile size
+        # 2. 对条件潜在表示进行填充，以便 U-Net 推理（缩放因子为 8）
         if cldm_tiled and (h1 < cldm_tile_size // 8 or w1 < cldm_tile_size // 8):
             print("[Diffusion]: the input size is tiny and unnecessary to tile.")
             cldm_tiled = False
-        # 2.2 Pad conditon latent
         if not cldm_tiled:
-            # If tiled inference is not used, apply padding directly.
             cond["c_img"] = pad_to_multiples_of(cond["c_img"], multiple=8)
             uncond["c_img"] = pad_to_multiples_of(uncond["c_img"], multiple=8)
         else:
-            # If tiled inference is used, then the latent tile size must be a multiple of 8.
             if cldm_tile_size % 64 != 0:
                 raise ValueError("Diffusion tile size must be a multiple of 64")
         h2, w2 = cond["c_img"].shape[2:]
-        # 3. Prepare start point of sampling
+        # 3. 准备采样的起始点
         if start_point_type == "cond":
             x_0 = cond["c_img"]
             x_T = self.diffusion.q_sample(
@@ -157,7 +160,7 @@ class Pipeline:
             )
         else:
             x_T = torch.randn((bs, 4, h2, w2), dtype=torch.float32, device=self.device)
-        # 4. Noise augmentation
+        # 4. 噪声增强
         if noise_aug > 0:
             cond["c_img"] = self.diffusion.q_sample(
                 x_start=cond["c_img"],
@@ -169,11 +172,11 @@ class Pipeline:
         if self.cond_fn:
             self.cond_fn.load_target(cond_img * 2 - 1)
 
-        # 5. Set control strength
+        # 5. 设置控制强度
         control_scales = self.cldm.control_scales
         self.cldm.control_scales = [strength] * 13
 
-        # 6. Run sampler
+        # 6. 运行采样器
         betas = self.diffusion.betas
         parameterization = self.diffusion.parameterization
         if sampler_type == "spaced":
@@ -214,9 +217,9 @@ class Pipeline:
                 x_T=x_T,
                 progress=True,
             )
-            # Remove padding for U-Net input
+            # 移除 U-Net 输入的填充
             z = z[..., :h1, :w1]
-        # 7. Decode generated latents
+        # 7. 解码生成的潜在表示
         if vae_decoder_tiled and (
             h1 < vae_decoder_tile_size // 8 or w1 < vae_decoder_tile_size // 8
         ):
@@ -232,6 +235,7 @@ class Pipeline:
         self.cldm.control_scales = control_scales
         return x
 
+    # 运行整个处理流程
     @torch.no_grad()
     def run(
         self,
@@ -320,7 +324,7 @@ class Pipeline:
         )
         return sample
 
-
+# 定义超分辨率处理流程类
 class BSRNetPipeline(Pipeline):
 
     def __init__(
@@ -335,10 +339,12 @@ class BSRNetPipeline(Pipeline):
         super().__init__(cleaner, cldm, diffusion, cond_fn, device)
         self.upscale = upscale
 
+    # 设置输出图像的大小，考虑上采样比例
     def set_output_size(self, lq_size: Tuple[int]) -> None:
         h, w = lq_size[2:]
         self.output_size = (int(h * self.upscale), int(w * self.upscale))
 
+    # 应用清理器处理输入图像，支持分块处理
     def apply_cleaner(
         self, lq: torch.Tensor, tiled: bool, tile_size: int, tile_stride: int
     ) -> torch.Tensor:
@@ -365,9 +371,10 @@ class BSRNetPipeline(Pipeline):
             )
         return output
 
-
+# 定义 SwinIR 处理流程类
 class SwinIRPipeline(Pipeline):
 
+    # 应用清理器处理输入图像，支持分块处理
     def apply_cleaner(
         self, lq: torch.Tensor, tiled: bool, tile_size: int, tile_stride: int
     ) -> torch.Tensor:
@@ -379,7 +386,7 @@ class SwinIRPipeline(Pipeline):
                 raise ValueError("SwinIR (cleaner) tile size must be a multiple of 64")
 
         if not tiled:
-            # For backward capability, put the resize operation before forward
+            # 为了向后兼容，将调整大小的操作放在前向传播之前
             if min(lq.shape[2:]) < 512:
                 lq = resize_short_edge_to(lq, size=512)
             h0, w0 = lq.shape[2:]
@@ -396,9 +403,10 @@ class SwinIRPipeline(Pipeline):
                 output = resize_short_edge_to(output, size=512)
         return output
 
-
+# 定义 SCUNet 处理流程类
 class SCUNetPipeline(Pipeline):
 
+    # 应用清理器处理输入图像，支持分块处理
     def apply_cleaner(
         self, lq: torch.Tensor, tiled: bool, tile_size: int, tile_stride: int
     ) -> torch.Tensor:

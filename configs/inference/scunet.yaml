@@ -1,5 +1,10 @@
+# 指定要使用的模型类，这里是 diffbir.model 模块中的 SCUNet 类
 target: diffbir.model.SCUNet
+# 模型的参数设置
 params:
+  # 输入通道数，表示输入图像的颜色通道数（例如，RGB 图像为 3）
   in_nc: 3
+  # 模型配置，表示每一层的卷积核数量
   config: [4,4,4,4,4,4,4]
+  # 模型的维度，表示特征图的通道数
   dim: 64

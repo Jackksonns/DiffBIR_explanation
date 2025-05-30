@@ -1,65 +1,50 @@
+# 控制潜扩散模型主配置
+# 对应代码：diffbir/model/cldm.py 中的 ControlLDM 类
 target: diffbir.model.ControlLDM
 params:
-  latent_scale_factor: 0.18215
+  # 潜空间缩放系数，用于VAE latent的标准化
+  latent_scale_factor: 0.18215  
+  
+  # UNet架构配置
   unet_cfg:
-    use_checkpoint: True
-    image_size: 32 # unused
-    in_channels: 4
-    out_channels: 4
-    model_channels: 320
-    attention_resolutions: [ 4, 2, 1 ]
-    num_res_blocks: 2
-    channel_mult: [ 1, 2, 4, 4 ]
-    num_head_channels: 64 # need to fix for flash-attn
-    use_spatial_transformer: True
-    use_linear_in_transformer: True
-    transformer_depth: 1
-    context_dim: 1024
-    legacy: False
+    use_checkpoint: True    # 启用梯度检查点节省显存
+    image_size: 32          # 保留参数（实际未被使用）
+    in_channels: 4          # 输入通道数（对应潜空间维度）
+    out_channels: 4         # 输出通道数
+    model_channels: 320      # 基础通道数
+    attention_resolutions: [4,2,1]  # 在不同分辨率层应用注意力机制
+    num_res_blocks: 2       # 每个分辨率层的残差块数量
+    channel_mult: [1,2,4,4]  # 通道数倍增系数（控制网络宽度）
+    num_head_channels: 64    # 多头注意力头维度
+    use_spatial_transformer: True  # 启用空间注意力
+    use_linear_in_transformer: True  # 在注意力中使用线性投影
+    transformer_depth: 1     # 注意力层堆叠深度
+    context_dim: 1024        # 文本嵌入维度（CLIP输出维度）
+    legacy: False            # 禁用旧版架构
+
+  # VAE配置（对应diffbir/model/vae.py）
   vae_cfg:
-    embed_dim: 4
+    embed_dim: 4             # 潜空间维度
     ddconfig:
-      double_z: true
-      z_channels: 4
-      resolution: 256
-      in_channels: 3
-      out_ch: 3
-      ch: 128
-      ch_mult:
-      - 1
-      - 2
-      - 4
-      - 4
-      num_res_blocks: 2
-      attn_resolutions: []
-      dropout: 0.0
+      double_z: true         # 双倍潜空间维度
+      z_channels: 4          
+      resolution: 256        # 输入分辨率
+      in_channels: 3         # RGB输入
+      out_ch: 3              
+      ch: 128                # 初始通道数
+      ch_mult: [1,2,4,4]     # VAE编码器通道倍增
+      num_res_blocks: 2      
+
+  # CLIP文本编码器配置
   clip_cfg:
-    embed_dim: 1024
-    vision_cfg:
-      image_size: 224
-      layers: 32
-      width: 1280
-      head_width: 80
-      patch_size: 14
+    embed_dim: 1024          # 文本嵌入维度
+    vision_cfg: ...          # 视觉部分配置（通常不使用）
     text_cfg:
-      context_length: 77
-      vocab_size: 49408
-      width: 1024
-      heads: 16
-      layers: 24
-    layer: "penultimate"
+      context_length: 77     # 最大文本长度
+      vocab_size: 49408      # CLIP词表大小
+
+  # ControlNet专用配置
   controlnet_cfg:
-    use_checkpoint: True
-    image_size: 32 # unused
-    in_channels: 4
-    hint_channels: 4
-    model_channels: 320
-    attention_resolutions: [ 4, 2, 1 ]
-    num_res_blocks: 2
-    channel_mult: [ 1, 2, 4, 4 ]
-    num_head_channels: 64 # need to fix for flash-attn
-    use_spatial_transformer: True
-    use_linear_in_transformer: True
-    transformer_depth: 1
-    context_dim: 1024
-    legacy: False
+    hint_channels: 4         # 控制信号输入通道（如边缘图/深度图）
+    model_channels: 320      # 与UNet保持通道一致
+    # 其他参数继承自UNet配置

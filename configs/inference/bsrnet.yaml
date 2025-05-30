@@ -1,8 +1,9 @@
 target: diffbir.model.RRDBNet
 params:
-  in_nc: 3
-  out_nc: 3
-  nf: 64
-  nb: 23
-  gc: 32
-  sf: 4
+  in_nc: 3        # 输入通道数(RGB)
+  out_nc: 3       # 输出通道数
+  nf: 64          # 基础特征通道数
+  nb: 23          # RRDB残差块数量
+  gc: 32          # 增长通道数
+  sf: 4           # 超分缩放因子
+# BSRNet盲图超分配置

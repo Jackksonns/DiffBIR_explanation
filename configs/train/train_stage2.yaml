@@ -1,8 +1,13 @@
+# 模型配置
 model:
+  # 指定要使用的模型类，这里是 diffbir.model.cldm 模块中的 ControlLDM 类
   cldm:
     target: diffbir.model.cldm.ControlLDM
+    # 模型的参数设置
     params:
+      # 潜在空间的缩放因子
       latent_scale_factor: 0.18215
+      # UNet 配置
       unet_cfg:
         use_checkpoint: True
         image_size: 32 # unused
@@ -18,6 +23,7 @@ model:
         transformer_depth: 1
         context_dim: 1024
         legacy: False
+      # VAE 配置
       vae_cfg:
         embed_dim: 4
         ddconfig:
@@ -35,6 +41,7 @@ model:
           num_res_blocks: 2
           attn_resolutions: []
           dropout: 0.0
+      # CLIP 配置
       clip_cfg:
         embed_dim: 1024
         vision_cfg:
@@ -50,6 +57,7 @@ model:
           heads: 16
           layers: 24
         layer: "penultimate"
+      # ControlNet 配置
       controlnet_cfg:
         use_checkpoint: True
         image_size: 32 # unused
@@ -66,8 +74,10 @@ model:
         context_dim: 1024
         legacy: False
 
+  # 指定要使用的模型类，这里是 diffbir.model.swinir 模块中的 SwinIR 类
   swinir:
     target: diffbir.model.swinir.SwinIR
+    # 模型的参数设置
     params:
       img_size: 64
       patch_size: 1
@@ -84,8 +94,10 @@ model:
       unshuffle: True
       unshuffle_scale: 8
 
+  # 指定要使用的模型类，这里是 diffbir.model.gaussian_diffusion 模块中的 Diffusion 类
   diffusion:
     target: diffbir.model.gaussian_diffusion.Diffusion
+    # 模型的参数设置
     params:
       linear_start: 0.00085
       linear_end: 0.0120
@@ -93,11 +105,15 @@ model:
       zero_snr: False
       parameterization: eps
 
+# 数据集配置
 dataset:
+  # 训练数据集配置
   train:
+    # 指定要使用的数据集类，这里是 diffbir.dataset.codeformer 模块中的 CodeformerDataset 类
     target: diffbir.dataset.codeformer.CodeformerDataset
+    # 数据集的参数设置
     params:
-      # training file list path
+      # 训练文件列表路径
       file_list: 
       file_backend_cfg:
         target: diffbir.dataset.file_backend.HardDiskBackend
@@ -111,22 +127,25 @@ dataset:
       noise_range: [0, 15]
       jpeg_range: [30, 100]
 
+# 批处理转换配置
 batch_transform:
+  # 指定要使用的批处理转换类，这里是 diffbir.dataset.batch_transform 模块中的 IdentityBatchTransform 类
   target: diffbir.dataset.batch_transform.IdentityBatchTransform
 
+# 训练配置
 train:
-  # pretrained sd v2.1 path
+  # 预训练的 SD v2.1 路径
   sd_path: 
-  # experiment directory path
+  # 实验目录路径
   exp_dir: 
-  # stage 1 swinir path.
-  # In our paper, we use SwinIR trained on ImageNet-1k with codeformer degradation.
+  # 阶段 1 的 SwinIR 路径
+  # 在我们的论文中，我们使用在 ImageNet-1k 上训练的 SwinIR，使用 codeformer 降质
   swinir_path: 
   learning_rate: 1e-4
-  # ImageNet 1k (1.3M images)
-  # batch size = 192, lr = 1e-4, total training steps = 25k
-  # Our filtered laion2b-en (15M images)
-  # batch size = 256, lr = 1e-4 (first 30k), 1e-5 (next 50k), total training steps = 80k
+  # ImageNet 1k (1.3M 图像)
+  # 批处理大小 = 192，学习率 = 1e-4，总训练步数 = 25k
+  # 我们过滤的 laion2b-en (15M 图像)
+  # 批处理大小 = 256，学习率 = 1e-4（前 30k），1e-5（后 50k），总训练步数 = 80k
   batch_size: 256
   num_workers: 
   train_steps: 30000

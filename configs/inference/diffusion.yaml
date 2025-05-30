@@ -1,5 +1,10 @@
+# 指定要使用的模型类，这里是 diffbir.model 模块中的 Diffusion 类
 target: diffbir.model.Diffusion
+# 模型的参数设置
 params:
+  # 扩散模型噪声的起始值，表示扩散过程开始时的噪声大小
   linear_start: 0.00085
+  # 扩散模型噪声的结束值，表示扩散过程结束时的噪声大小
   linear_end: 0.0120
+  # 扩散过程的总步数，步数越多，过程越细致，但计算也会更慢
   timesteps: 1000

@@ -1,8 +1,13 @@
+# 模型配置
 model:
+  # 指定要使用的模型类，这里是 diffbir.model.cldm 模块中的 ControlLDM 类
   cldm:
     target: diffbir.model.cldm.ControlLDM
+    # 模型的参数设置
     params:
+      # 潜在空间的缩放因子
       latent_scale_factor: 0.18215
+      # UNet 配置
       unet_cfg:
         use_checkpoint: True
         image_size: 32 # unused
@@ -18,6 +23,7 @@ model:
         transformer_depth: 1
         context_dim: 1024
         legacy: False
+      # VAE 配置
       vae_cfg:
         embed_dim: 4
         ddconfig:
@@ -35,6 +41,7 @@ model:
           num_res_blocks: 2
           attn_resolutions: []
           dropout: 0.0
+      # CLIP 配置
       clip_cfg:
         embed_dim: 1024
         vision_cfg:
@@ -50,6 +57,7 @@ model:
           heads: 16
           layers: 24
         layer: "penultimate"
+      # ControlNet 配置
       controlnet_cfg:
         use_checkpoint: True
         image_size: 32 # unused
@@ -66,8 +74,10 @@ model:
         context_dim: 1024
         legacy: False
 
+  # 指定要使用的模型类，这里是 diffbir.model.swinir 模块中的 SwinIR 类
   swinir:
     target: diffbir.model.swinir.SwinIR
+    # 模型的参数设置
     params:
       img_size: 64
       patch_size: 1
@@ -84,8 +94,10 @@ model:
       unshuffle: True
       unshuffle_scale: 8
 
+  # 指定要使用的模型类，这里是 diffbir.model.gaussian_diffusion 模块中的 Diffusion 类
   diffusion:
     target: diffbir.model.gaussian_diffusion.Diffusion
+    # 模型的参数设置
     params:
       linear_start: 0.00085
       linear_end: 0.0120
@@ -93,14 +105,17 @@ model:
       zero_snr: True
       parameterization: v
 
+# 数据集配置
 dataset:
+  # 训练数据集配置
   train:
+    # 指定要使用的数据集类，这里是 diffbir.dataset.realesrgan 模块中的 RealESRGANDataset 类
     target: diffbir.dataset.realesrgan.RealESRGANDataset
+    # 数据集的参数设置
     params:
-      # Path to the file list.
+      # 文件元数据路径
       file_metas:
-        # The training set is formatted as a parquet file.
-        # Each row contains file path, long caption and short caption of a high-quality image.
+        # 训练集格式为 parquet 文件，每行包含高质量图像的文件路径、长描述和短描述
         - file_list: 
           image_path_key: image_path
           short_prompt_key: llava_short
@@ -137,13 +152,16 @@ dataset:
 
       p_empty_prompt: 0.2
 
+# 批处理转换配置
 batch_transform:
+  # 指定要使用的批处理转换类，这里是 diffbir.dataset.batch_transform 模块中的 RealESRGANBatchTransform 类
   target: diffbir.dataset.batch_transform.RealESRGANBatchTransform
+  # 批处理转换的参数设置
   params:
     use_sharpener: true
-    # Queue size of training pool, this should be multiples of batch_size (per GPU).
+    # 训练池的队列大小，这应该是 batch_size 的倍数（每个 GPU）
     queue_size: 256
-    # the first degradation process
+    # 第一个降质过程
     resize_prob: [0.2, 0.7, 0.1] # up, down, keep
     resize_range: [0.15, 1.5]
     gaussian_noise_prob: 0.5
@@ -152,7 +170,7 @@ batch_transform:
     gray_noise_prob: 0.4
     jpeg_range: [30, 95]
 
-    # the second degradation process
+    # 第二个降质过程
     stage2_scale: 4
     second_blur_prob: 0.8
     resize_prob2: [0.3, 0.4, 0.3] # up, down, keep
@@ -163,13 +181,14 @@ batch_transform:
     gray_noise_prob2: 0.4
     jpeg_range2: [30, 95]
 
+# 训练配置
 train:
-  # pretrained sd v2.1-zsnr path
+  # 预训练的 SD v2.1-zsnr 路径
   sd_path: 
-  # experiment directory path
+  # 实验目录路径
   exp_dir: 
-  # stage 1 swinir path.
-  # For DiffBIR v2.1, we use SwinIR trained on ImageNet-1k with RealESRGAN degradation.
+  # 阶段 1 的 SwinIR 路径
+  # 对于 DiffBIR v2.1，我们使用在 ImageNet-1k 上训练的 SwinIR，使用 RealESRGAN 降质
   swinir_path: 
   learning_rate: 1e-5
   batch_size: 512
